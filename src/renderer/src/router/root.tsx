@@ -9,23 +9,41 @@ const BRANDING = { title: 'App' }
 
 const NAVIGATION: Navigation = [
   {
-    segment: 'haha'
+    segment: '',
+    title: '看板'
   },
   {
     kind: 'divider'
   },
   {
     kind: 'header',
-    title: 'App'
+    title: '应用'
+  },
+  {
+    segment: 'staff',
+    title: '员工',
+    children: [
+      {
+        segment: '',
+        title: '列表'
+      },
+      {
+        segment: 'new',
+        title: '新增'
+      }
+    ]
   },
   {
     segment: 'invoice',
+    title: '发票',
     children: [
       {
-        segment: 'list'
+        segment: '',
+        title: '列表'
       },
       {
-        segment: 'add'
+        segment: 'new',
+        title: '新增'
       }
     ]
   }
@@ -54,17 +72,40 @@ const RootRoute: React.FC = () => {
 
 const router = createHashRouter([
   {
-    id: 'root',
     Component: RootRoute,
     children: [
       {
-        id: 'dashLayout',
         Component: DashLayout,
         children: [
           {
-            id: 'home',
             index: true,
             lazy: () => import('@renderer/pages/home/component')
+          },
+          {
+            path: 'invoice',
+            children: [
+              {
+                index: true,
+                lazy: () => import('@renderer/pages/invoice/component')
+              },
+              {
+                path: 'new',
+                lazy: () => import('@renderer/pages/invoice_new/component')
+              }
+            ]
+          },
+          {
+            path: 'staff',
+            children: [
+              {
+                index: true,
+                lazy: () => import('@renderer/pages/staff/component')
+              },
+              {
+                path: 'new',
+                lazy: () => import('@renderer/pages/staff_new/component')
+              }
+            ]
           }
         ]
       }

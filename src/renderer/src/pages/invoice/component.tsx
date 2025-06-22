@@ -25,7 +25,6 @@ import {
 } from '@tanstack/react-table'
 import type { Invoice } from '../../../../main/schema'
 import { RefreshOutlined } from '@mui/icons-material'
-import '../../../../preload/index.d'
 
 const fetchInvoice = () => {
   return queryOptions({

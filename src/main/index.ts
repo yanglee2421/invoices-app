@@ -80,8 +80,6 @@ type InvoiceSelectPayload = {
 // code. You can also put them in separate files and require them here.
 ipcMain.handle('invoice', async (_, payload: InvoiceSelectPayload) => {
   try {
-    console.log('invoice')
-
     const wheres = [
       payload.code && sql.eq(schema.invoice.code, `%${payload.code}%`),
       payload.amount && sql.like(schema.invoice.amount, `%${payload.amount}%`),

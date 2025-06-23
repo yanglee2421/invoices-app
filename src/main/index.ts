@@ -124,7 +124,7 @@ type InvoiceInsertPayload = {
 
 ipcMain.handle('invoice:new', async (_, payload: InvoiceInsertPayload) => {
   try {
-    const data = await db.insert(schema.invoice).values(payload).returning()
+    const data = await db.insert(schema.invoice).values(payload).onConflictDoNothing().returning()
     return data
   } catch (error) {
     if (error instanceof Error) {
@@ -166,7 +166,7 @@ type StaffInsertParams = {
 
 ipcMain.handle('staff:new', async (_, payload: StaffInsertParams) => {
   try {
-    const data = await db.insert(schema.staff).values(payload).returning()
+    const data = await db.insert(schema.staff).values(payload).onConflictDoNothing().returning()
     return data
   } catch (error) {
     if (error instanceof Error) {

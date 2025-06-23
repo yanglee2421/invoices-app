@@ -40,7 +40,14 @@ const fetchInvoice = () => {
 
 const columnHelper = createColumnHelper<Staff>()
 
-const columns = [columnHelper.accessor('id', {}), columnHelper.accessor('name', {})]
+const columns = [
+  columnHelper.accessor('id', {
+    header: 'ID'
+  }),
+  columnHelper.accessor('name', {
+    header: '名称'
+  })
+]
 
 export const Component: React.FC = () => {
   'use no memo'

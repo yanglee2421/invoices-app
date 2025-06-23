@@ -29,7 +29,7 @@ export type fetchInvoiceParams = {
 
 export const fetchInvoice = (params: fetchInvoiceParams) =>
   queryOptions({
-    queryKey: ['invoice'],
+    queryKey: ['invoice', params],
     queryFn() {
       return window.electron.ipcRenderer.invoke('invoice', params) as unknown as {
         total: number
@@ -38,10 +38,16 @@ export const fetchInvoice = (params: fetchInvoiceParams) =>
     }
   })
 
+export type InvoiceInsertPayload = {
+  code: string
+  amount: string
+  date: string
+}[]
+
 export const useInvoiceNew = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    async mutationFn(payload) {
+    async mutationFn(payload: InvoiceInsertPayload) {
       await window.electron.ipcRenderer.invoke('invoice:new', payload)
     },
     async onSuccess() {

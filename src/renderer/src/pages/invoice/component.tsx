@@ -11,9 +11,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Grid,
   IconButton,
   LinearProgress,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -27,14 +29,14 @@ import {
   Typography
 } from '@mui/material'
 import React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { EditOutlined, RefreshOutlined } from '@mui/icons-material'
+import { AddOutlined, EditOutlined, RefreshOutlined } from '@mui/icons-material'
 import { Staff } from '@main/schema'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
@@ -230,8 +232,18 @@ tablePadding.set('checkbox', 'checkbox')
 
 export const Component: React.FC = () => {
   'use no memo'
+
+  const [pageIndex, setPageIndex] = React.useState(0)
+  const [pageSize, setPageSize] = React.useState(20)
+
   const dialog = useDialogs()
-  const query = useQuery(fetchInvoice({}))
+  const query = useQuery({
+    ...fetchInvoice({
+      pageIndex,
+      pageSize
+    }),
+    placeholderData: keepPreviousData
+  })
 
   const data = React.useMemo(() => query.data?.rows || [], [query.data])
 
@@ -297,62 +309,81 @@ export const Component: React.FC = () => {
           title="发票管理"
         />
         <CardContent>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              const rows = table.getSelectedRowModel().rows
-              const staffs = [
-                ...new Set(rows.flatMap((i) => i.original.staffToInvoice.map((i) => i.staffId)))
-              ]
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField fullWidth />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField fullWidth />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TextField fullWidth />
+            </Grid>
+          </Grid>
+        </CardContent>
+        <Divider />
+        <CardContent>
+          <Stack direction={'row'} flexWrap={'wrap'} useFlexGap gap={1}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                const rows = table.getSelectedRowModel().rows
+                const staffs = [
+                  ...new Set(rows.flatMap((i) => i.original.staffToInvoice.map((i) => i.staffId)))
+                ]
 
-              const map = new Map<number, string>()
+                const map = new Map<number, string>()
 
-              staffs.forEach((staff) => {
-                map.set(
-                  staff,
-                  rows
-                    .filter((i) =>
-                      i.original.staffToInvoice.some((staffToInvoice) =>
-                        Object.is(staff, staffToInvoice.staffId)
-                      )
-                    )
-                    .reduce((r, i) => {
-                      return mathjs
-                        .add(
-                          mathjs.divide(
-                            mathjs.bignumber(i.original.amount),
-                            mathjs.bignumber(i.original.staffToInvoice.length)
-                          ),
-                          mathjs.bignumber(r)
+                staffs.forEach((staff) => {
+                  map.set(
+                    staff,
+                    rows
+                      .filter((i) =>
+                        i.original.staffToInvoice.some((staffToInvoice) =>
+                          Object.is(staff, staffToInvoice.staffId)
                         )
-                        .toString()
-                    }, '0')
-                )
-              })
+                      )
+                      .reduce((r, i) => {
+                        return mathjs
+                          .add(
+                            mathjs.divide(
+                              mathjs.bignumber(i.original.amount),
+                              mathjs.bignumber(i.original.staffToInvoice.length)
+                            ),
+                            mathjs.bignumber(r)
+                          )
+                          .toString()
+                      }, '0')
+                  )
+                })
 
-              dialog.open(ResultDialog, {
-                children: (
-                  <Table>
-                    <TableHead>
-                      <TableCell>STAFF</TableCell>
-                      <TableCell>AMOUNT</TableCell>
-                    </TableHead>
-                    <TableBody>
-                      {[...map.entries()].map((i) => (
-                        <TableRow key={i[0]}>
-                          <TableCell>{i[0]}</TableCell>
-                          <TableCell>{i[1]}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )
-              })
-            }}
-            disabled={!table.getSelectedRowModel().rows.length}
-          >
-            计算
-          </Button>
+                dialog.open(ResultDialog, {
+                  children: (
+                    <Table>
+                      <TableHead>
+                        <TableCell>STAFF</TableCell>
+                        <TableCell>AMOUNT</TableCell>
+                      </TableHead>
+                      <TableBody>
+                        {[...map.entries()].map((i) => (
+                          <TableRow key={i[0]}>
+                            <TableCell>{i[0]}</TableCell>
+                            <TableCell>{i[1]}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )
+                })
+              }}
+              disabled={!table.getSelectedRowModel().rows.length}
+            >
+              计算
+            </Button>
+            <Button variant="outlined" startIcon={<AddOutlined />}>
+              新增
+            </Button>
+          </Stack>
         </CardContent>
         {query.isFetching && <LinearProgress />}
         <TableContainer>
@@ -386,12 +417,14 @@ export const Component: React.FC = () => {
         </TableContainer>
         <TablePagination
           component={'div'}
-          rowsPerPage={20}
-          count={0}
-          page={0}
+          rowsPerPage={pageSize}
+          count={table.getRowCount()}
+          page={pageIndex}
           rowsPerPageOptions={[20, 50, 100]}
-          onPageChange={Boolean}
-          onRowsPerPageChange={Boolean}
+          onPageChange={(_, page) => setPageIndex(page)}
+          onRowsPerPageChange={(e) => {
+            setPageSize(Number.parseInt(e.target.value))
+          }}
         />
       </Card>
     </Box>

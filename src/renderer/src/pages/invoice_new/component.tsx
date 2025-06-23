@@ -22,7 +22,8 @@ import { prepareZXingModule, readBarcodes } from 'zxing-wasm/reader'
 import wasmURL from 'zxing-wasm/reader/zxing_reader.wasm?url'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { z } from 'zod'
-import { useDialogs } from '@toolpad/core'
+import { useDialogs, useNotifications } from '@toolpad/core'
+import { useInvoiceNew, InvoiceInsertPayload } from '@renderer/api/invoice'
 
 prepareZXingModule({
   overrides: {
@@ -103,12 +104,6 @@ const fetchPDF = (file: File) =>
     }
   })
 
-type InvoiceInsertPayload = {
-  code: string
-  amount: string
-  date: string
-}[]
-
 export const Component: React.FC = () => {
   const [files, setFiles] = React.useState<File[]>([])
 
@@ -116,6 +111,8 @@ export const Component: React.FC = () => {
     queries: files.map((file) => fetchPDF(file))
   })
   const dialog = useDialogs()
+  const create = useInvoiceNew()
+  const toast = useNotifications()
 
   return (
     <Box padding={3}>
@@ -145,7 +142,9 @@ export const Component: React.FC = () => {
                         }}
                         alt=""
                         style={{
-                          maxWidth: '100%'
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          width: '100%'
                         }}
                       />
                       <figcaption
@@ -169,8 +168,16 @@ export const Component: React.FC = () => {
                     key={fileToFileId(file)}
                     secondaryAction={
                       <IconButton
-                        onClick={() => {
-                          setFiles((prev) => prev.filter((i) => !Object.is(file, i)))
+                        onClick={async () => {
+                          const confirmed = await dialog.confirm('确认删除吗？', {
+                            title: '警告',
+                            severity: 'error',
+                            okText: '确认',
+                            cancelText: '取消'
+                          })
+                          if (confirmed) {
+                            setFiles((prev) => prev.filter((i) => !Object.is(file, i)))
+                          }
                         }}
                         color="error"
                       >
@@ -221,9 +228,16 @@ export const Component: React.FC = () => {
                   return item
                 })
                 .filter((i) => typeof i === 'object')
-              await window.electron.ipcRenderer.invoke('invoice:new', data)
-              dialog.alert('新增成功')
+              create.mutate(data, {
+                onSuccess() {
+                  toast.show('新增成功', { severity: 'success' })
+                },
+                onError(error) {
+                  toast.show(error.message, { severity: 'error' })
+                }
+              })
             }}
+            disabled={create.isPending}
           >
             保存
           </Button>

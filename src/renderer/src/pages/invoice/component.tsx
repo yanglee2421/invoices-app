@@ -17,6 +17,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableCellProps,
   TableContainer,
   TableFooter,
   TableHead,
@@ -26,7 +27,7 @@ import {
   Typography
 } from '@mui/material'
 import React from 'react'
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   createColumnHelper,
   flexRender,
@@ -39,37 +40,7 @@ import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
 import { useDialogs, useNotifications, DialogProps } from '@toolpad/core'
 import * as mathjs from 'mathjs'
-
-type StaffToInvoice = {
-  staffId: number
-  invoiceId: number
-  staff: {
-    id: number
-    name: string | null
-    alias: null
-    enableAlias: null
-  }
-}
-
-type Invoice = {
-  id: number
-  code: string | null
-  amount: string | null
-  date: string | null
-  staffToInvoice: StaffToInvoice[]
-}
-
-const fetchInvoice = () => {
-  return queryOptions({
-    queryKey: ['invoice'],
-    queryFn() {
-      return window.electron.ipcRenderer.invoke('invoice', {}) as unknown as {
-        total: number
-        rows: Invoice[]
-      }
-    }
-  })
-}
+import { fetchInvoice, Invoice } from '@renderer/api/invoice'
 
 const formSchema = z.object({
   staff: z.number().array()
@@ -213,21 +184,29 @@ const columns = [
       />
     )
   }),
-  columnHelper.accessor('id', {}),
-  columnHelper.accessor('code', {}),
-  columnHelper.accessor('amount', {}),
-  columnHelper.accessor('date', {}),
+  columnHelper.accessor('id', {
+    header: 'ID'
+  }),
+  columnHelper.accessor('code', {
+    header: '发票号码'
+  }),
+  columnHelper.accessor('amount', {
+    header: '价税合计'
+  }),
+  columnHelper.accessor('date', { header: '开票日期' }),
   columnHelper.accessor('staffToInvoice', {
+    header: '人员',
     cell: (props) => (
-      <>
+      <Box display={'flex'} gap={1} flexWrap={'wrap'}>
         {props.getValue().map((staff) => (
-          <Chip key={staff.staff.id} label={staff.staff.name} variant="outlined" />
+          <Chip key={staff.staff.id} label={staff.staff.name} variant="outlined" size="small" />
         ))}
-      </>
+      </Box>
     )
   }),
   columnHelper.display({
     id: 'actions',
+    header: '操作',
     cell(props) {
       return <StaffSelectDialog id={props.row.original.id} />
     }
@@ -246,10 +225,13 @@ const ResultDialog = (props: DialogProps<React.PropsWithChildren>) => {
   )
 }
 
+const tablePadding = new Map<string, TableCellProps['padding']>()
+tablePadding.set('checkbox', 'checkbox')
+
 export const Component: React.FC = () => {
   'use no memo'
   const dialog = useDialogs()
-  const query = useQuery(fetchInvoice())
+  const query = useQuery(fetchInvoice({}))
 
   const data = React.useMemo(() => query.data?.rows || [], [query.data])
 
@@ -295,7 +277,7 @@ export const Component: React.FC = () => {
     return table.getRowModel().rows.map((row) => (
       <TableRow key={row.id}>
         {row.getVisibleCells().map((cell) => (
-          <TableCell key={cell.id}>
+          <TableCell key={cell.id} padding={tablePadding.get(cell.column.id)}>
             {cell.getIsPlaceholder() || flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
         ))}
@@ -379,7 +361,7 @@ export const Component: React.FC = () => {
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableCell key={header.id}>
+                    <TableCell key={header.id} padding={tablePadding.get(header.column.id)}>
                       {header.isPlaceholder ||
                         flexRender(header.column.columnDef.header, header.getContext())}
                     </TableCell>
@@ -392,7 +374,7 @@ export const Component: React.FC = () => {
               {table.getFooterGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableCell key={header.id}>
+                    <TableCell key={header.id} padding={tablePadding.get(header.column.id)}>
                       {header.isPlaceholder ||
                         flexRender(header.column.columnDef.header, header.getContext())}
                     </TableCell>

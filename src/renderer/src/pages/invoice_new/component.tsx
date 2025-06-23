@@ -1,7 +1,11 @@
-import { DeleteOutlined, InsertDriveFileOutlined } from '@mui/icons-material'
+import {
+  ArrowUpwardOutlined,
+  DeleteOutlined,
+  InsertDriveFileOutlined,
+  LinkOutlined
+} from '@mui/icons-material'
 import {
   Box,
-  Button,
   Card,
   CardActions,
   CardContent,
@@ -9,6 +13,7 @@ import {
   CircularProgress,
   Grid,
   IconButton,
+  InputAdornment,
   List,
   ListItem,
   ListItemIcon,
@@ -117,9 +122,131 @@ export const Component: React.FC = () => {
   return (
     <Box padding={3}>
       <Card>
-        <CardHeader />
+        <CardHeader
+          title="发票录入"
+          action={
+            <IconButton
+              onClick={async () => {
+                const data: InvoiceInsertPayload = queries
+                  .map((i) => {
+                    if (!i.data) return false
+                    const item = i.data.invoices.at(0)
+                    if (!item) return false
+                    return item
+                  })
+                  .filter((i) => typeof i === 'object')
+                create.mutate(data, {
+                  onSuccess() {
+                    toast.show('新增成功', { severity: 'success' })
+                  },
+                  onError(error) {
+                    toast.show(error.message, { severity: 'error' })
+                  }
+                })
+              }}
+              disabled={create.isPending}
+            >
+              <ArrowUpwardOutlined />
+            </IconButton>
+          }
+        />
         <CardContent>
           <Grid container spacing={3}>
+            <Grid size={12}>
+              <TextField
+                onPaste={(e) => {
+                  setFiles((prev) => {
+                    const allFiles = prev.concat([...e.clipboardData.files])
+
+                    const fileMap = new Map<string, File>()
+                    for (const file of allFiles) {
+                      fileMap.set(fileToFileId(file), file)
+                    }
+                    return [...fileMap.values()]
+                  })
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  setFiles((prev) => {
+                    const allFiles = prev.concat([...e.dataTransfer.files])
+
+                    const fileMap = new Map<string, File>()
+                    for (const file of allFiles) {
+                      fileMap.set(fileToFileId(file), file)
+                    }
+                    return [...fileMap.values()]
+                  })
+                }}
+                placeholder="粘贴或拖拽PDF文件到此处..."
+                fullWidth
+                minRows={2}
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton component="label">
+                          <input
+                            hidden
+                            type="file"
+                            value={''}
+                            onChange={(e) => {
+                              setFiles((prev) => {
+                                const files = e.target.files ? [...e.target.files] : []
+                                const allFiles = prev.concat(files)
+
+                                const fileMap = new Map<string, File>()
+                                for (const file of allFiles) {
+                                  fileMap.set(fileToFileId(file), file)
+                                }
+                                return [...fileMap.values()]
+                              })
+                            }}
+                            multiple
+                            accept="application/pdf"
+                          />
+                          <LinkOutlined />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                }}
+              />
+            </Grid>
+            <Grid size={12}>
+              <List>
+                {files.map((file) => (
+                  <ListItem
+                    key={fileToFileId(file)}
+                    secondaryAction={
+                      <IconButton
+                        onClick={async () => {
+                          const confirmed = await dialog.confirm('确认删除吗？', {
+                            title: '警告',
+                            severity: 'error',
+                            okText: '确认',
+                            cancelText: '取消'
+                          })
+                          if (confirmed) {
+                            setFiles((prev) => prev.filter((i) => !Object.is(file, i)))
+                          }
+                        }}
+                        color="error"
+                      >
+                        <DeleteOutlined />
+                      </IconButton>
+                    }
+                  >
+                    <ListItemIcon>
+                      <InsertDriveFileOutlined />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={file.name}
+                      secondary={new Date(file.lastModified).toLocaleString()}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Grid>
             {queries.map((i, index) => (
               <Grid key={index} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
                 {(() => {
@@ -160,89 +287,9 @@ export const Component: React.FC = () => {
                 })()}
               </Grid>
             ))}
-
-            <Grid size={12}>
-              <List>
-                {files.map((file) => (
-                  <ListItem
-                    key={fileToFileId(file)}
-                    secondaryAction={
-                      <IconButton
-                        onClick={async () => {
-                          const confirmed = await dialog.confirm('确认删除吗？', {
-                            title: '警告',
-                            severity: 'error',
-                            okText: '确认',
-                            cancelText: '取消'
-                          })
-                          if (confirmed) {
-                            setFiles((prev) => prev.filter((i) => !Object.is(file, i)))
-                          }
-                        }}
-                        color="error"
-                      >
-                        <DeleteOutlined />
-                      </IconButton>
-                    }
-                  >
-                    <ListItemIcon>
-                      <InsertDriveFileOutlined />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={file.name}
-                      secondary={new Date(file.lastModified).toLocaleString()}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Grid>
-            <Grid size={12}>
-              <TextField
-                onPaste={(e) => {
-                  setFiles((prev) => {
-                    const allFiles = prev.concat([...e.clipboardData.files])
-
-                    const fileMap = new Map<string, File>()
-                    for (const file of allFiles) {
-                      fileMap.set(fileToFileId(file), file)
-                    }
-                    return [...fileMap.values()]
-                  })
-                }}
-                placeholder="在此处粘贴发票"
-                fullWidth
-                multiline
-                minRows={2}
-              />
-            </Grid>
           </Grid>
         </CardContent>
-        <CardActions>
-          <Button
-            onClick={async () => {
-              const data: InvoiceInsertPayload = queries
-                .map((i) => {
-                  if (!i.data) return false
-                  const item = i.data.invoices.at(0)
-                  if (!item) return false
-                  return item
-                })
-                .filter((i) => typeof i === 'object')
-              create.mutate(data, {
-                onSuccess() {
-                  toast.show('新增成功', { severity: 'success' })
-                },
-                onError(error) {
-                  toast.show(error.message, { severity: 'error' })
-                }
-              })
-            }}
-            disabled={create.isPending}
-          >
-            保存
-          </Button>
-          <Button>重置</Button>
-        </CardActions>
+        <CardActions></CardActions>
       </Card>
     </Box>
   )

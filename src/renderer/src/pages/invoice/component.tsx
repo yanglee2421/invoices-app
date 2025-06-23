@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -36,7 +37,8 @@ import { EditOutlined, RefreshOutlined } from '@mui/icons-material'
 import { Staff } from '@main/schema'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
-import { useNotifications } from '@toolpad/core'
+import { useDialogs, useNotifications, DialogProps } from '@toolpad/core'
+import * as mathjs from 'mathjs'
 
 type StaffToInvoice = {
   staffId: number
@@ -188,6 +190,29 @@ const StaffSelectDialog = (props: StaffSelectDialogProps) => {
 const columnHelper = createColumnHelper<Invoice>()
 
 const columns = [
+  columnHelper.display({
+    id: 'checkbox',
+    header: (props) => (
+      <Checkbox
+        checked={props.table.getIsAllRowsSelected()}
+        indeterminate={props.table.getIsSomeRowsSelected()}
+        onChange={props.table.getToggleAllRowsSelectedHandler()}
+      />
+    ),
+    cell: (props) => (
+      <Checkbox
+        checked={props.row.getIsSelected()}
+        onChange={props.row.getToggleSelectedHandler()}
+      />
+    ),
+    footer: (props) => (
+      <Checkbox
+        checked={props.table.getIsAllRowsSelected()}
+        indeterminate={props.table.getIsSomeRowsSelected()}
+        onChange={props.table.getToggleAllRowsSelectedHandler()}
+      />
+    )
+  }),
   columnHelper.accessor('id', {}),
   columnHelper.accessor('code', {}),
   columnHelper.accessor('amount', {}),
@@ -209,8 +234,21 @@ const columns = [
   })
 ]
 
+const ResultDialog = (props: DialogProps<React.PropsWithChildren>) => {
+  return (
+    <Dialog open={props.open} onClose={() => props.onClose()} fullWidth>
+      <DialogTitle>计算结果</DialogTitle>
+      <DialogContent>{props.payload.children}</DialogContent>
+      <DialogActions>
+        <Button onClick={() => props.onClose()}>确定</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 export const Component: React.FC = () => {
   'use no memo'
+  const dialog = useDialogs()
   const query = useQuery(fetchInvoice())
 
   const data = React.useMemo(() => query.data?.rows || [], [query.data])
@@ -274,8 +312,66 @@ export const Component: React.FC = () => {
               <RefreshOutlined />
             </IconButton>
           }
+          title="发票管理"
         />
-        <CardContent></CardContent>
+        <CardContent>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              const rows = table.getSelectedRowModel().rows
+              const staffs = [
+                ...new Set(rows.flatMap((i) => i.original.staffToInvoice.map((i) => i.staffId)))
+              ]
+
+              const map = new Map<number, string>()
+
+              staffs.forEach((staff) => {
+                map.set(
+                  staff,
+                  rows
+                    .filter((i) =>
+                      i.original.staffToInvoice.some((staffToInvoice) =>
+                        Object.is(staff, staffToInvoice.staffId)
+                      )
+                    )
+                    .reduce((r, i) => {
+                      return mathjs
+                        .add(
+                          mathjs.divide(
+                            mathjs.bignumber(i.original.amount),
+                            mathjs.bignumber(i.original.staffToInvoice.length)
+                          ),
+                          mathjs.bignumber(r)
+                        )
+                        .toString()
+                    }, '0')
+                )
+              })
+
+              dialog.open(ResultDialog, {
+                children: (
+                  <Table>
+                    <TableHead>
+                      <TableCell>STAFF</TableCell>
+                      <TableCell>AMOUNT</TableCell>
+                    </TableHead>
+                    <TableBody>
+                      {[...map.entries()].map((i) => (
+                        <TableRow key={i[0]}>
+                          <TableCell>{i[0]}</TableCell>
+                          <TableCell>{i[1]}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
+              })
+            }}
+            disabled={!table.getSelectedRowModel().rows.length}
+          >
+            计算
+          </Button>
+        </CardContent>
         {query.isFetching && <LinearProgress />}
         <TableContainer>
           <Table>

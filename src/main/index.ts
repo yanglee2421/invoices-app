@@ -108,7 +108,7 @@ type InvoiceInsertPayload = {
   code: string
   amount: string
   date: string
-}
+}[]
 
 ipcMain.handle('invoice:new', async (_, payload: InvoiceInsertPayload) => {
   try {

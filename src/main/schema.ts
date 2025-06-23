@@ -11,7 +11,7 @@ export const staff = sqliteTable('staff', {
 export type Staff = typeof staff.$inferSelect
 
 export const staffRelation = relations(staff, (props) => ({
-  invoices: props.many(invoice)
+  staffToInvoice: props.many(staffToInvoice)
 }))
 
 export const invoice = sqliteTable('invoice', {
@@ -24,10 +24,10 @@ export const invoice = sqliteTable('invoice', {
 export type Invoice = typeof invoice.$inferSelect
 
 export const invoiceRelation = relations(invoice, (props) => ({
-  staffs: props.many(staff)
+  staffToInvoice: props.many(staffToInvoice)
 }))
 
-const staffToInvoice = sqliteTable(
+export const staffToInvoice = sqliteTable(
   'staffToInvoice',
   {
     staffId: int().notNull(),
@@ -39,10 +39,12 @@ const staffToInvoice = sqliteTable(
 export const staffToInvoiceRelation = relations(staffToInvoice, (props) => ({
   staff: props.one(staff, {
     fields: [staffToInvoice.staffId],
-    references: [staff.id]
+    references: [staff.id],
+    relationName: 'toStaff'
   }),
   invoice: props.one(invoice, {
     fields: [staffToInvoice.invoiceId],
-    references: [invoice.id]
+    references: [invoice.id],
+    relationName: 'toInvoice'
   })
 }))

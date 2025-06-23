@@ -8,6 +8,13 @@
       "when": 1750583040972,
       "tag": "0000_lush_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1750649665938,
+      "tag": "0001_remarkable_firebrand",
+      "breakpoints": true
     }
   ]
 }

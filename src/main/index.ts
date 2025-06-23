@@ -74,11 +74,14 @@ type InvoiceSelectPayload = {
   code?: string
   amount?: string
   date?: string
+  pageIndex?: number
+  pageSize?: number
 }
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 ipcMain.handle('invoice', async (_, payload: InvoiceSelectPayload) => {
+  const { pageIndex = 0, pageSize = 20 } = payload
   try {
     const wheres = [
       payload.code && sql.eq(schema.invoice.code, `%${payload.code}%`),
@@ -90,10 +93,19 @@ ipcMain.handle('invoice', async (_, payload: InvoiceSelectPayload) => {
       .select({ total: sql.count() })
       .from(schema.invoice)
       .where(sql.and(...wheres))
-    const rows = await db
-      .select()
-      .from(schema.invoice)
-      .where(sql.and(...wheres))
+    const rows = await db.query.invoice.findMany({
+      with: {
+        staffToInvoice: {
+          with: {
+            staff: true
+          }
+        }
+      },
+      where: sql.and(...wheres),
+      offset: pageIndex * pageSize,
+      limit: pageSize
+    })
+
     return { total, rows }
   } catch (error) {
     if (error instanceof Error) {
@@ -113,6 +125,67 @@ type InvoiceInsertPayload = {
 ipcMain.handle('invoice:new', async (_, payload: InvoiceInsertPayload) => {
   try {
     const data = await db.insert(schema.invoice).values(payload).returning()
+    return data
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error.message
+    }
+
+    throw String(error)
+  }
+})
+
+type StaffSelectParams = {
+  pageIndex?: number
+  pageSize?: number
+}
+
+ipcMain.handle('staff', async (_, payload: StaffSelectParams) => {
+  const { pageIndex = 0, pageSize = 20 } = payload
+  try {
+    const [{ count }] = await db.select({ count: sql.count() }).from(schema.staff).where(sql.and())
+    const rows = await db.query.staff.findMany({
+      where: sql.and(),
+      offset: pageIndex * pageSize,
+      limit: pageSize
+    })
+
+    return { count, rows }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error.message
+    }
+
+    throw String(error)
+  }
+})
+
+type StaffInsertParams = {
+  name: string
+}[]
+
+ipcMain.handle('staff:new', async (_, payload: StaffInsertParams) => {
+  try {
+    const data = await db.insert(schema.staff).values(payload).returning()
+    return data
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error.message
+    }
+
+    throw String(error)
+  }
+})
+
+type StaffToInvoiceInsertParams = {
+  staffId: number
+  invoiceId: number
+}
+
+ipcMain.handle('staffToInvoice:new', async (_, payload: StaffToInvoiceInsertParams) => {
+  try {
+    const data = await db.insert(schema.staffToInvoice).values(payload).returning()
+
     return data
   } catch (error) {
     if (error instanceof Error) {

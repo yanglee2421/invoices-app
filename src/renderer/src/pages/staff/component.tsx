@@ -16,27 +16,15 @@ import {
   Typography
 } from '@mui/material'
 import React from 'react'
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import type { Staff } from '../../../../main/schema'
-import { RefreshOutlined } from '@mui/icons-material'
-
-const fetchInvoice = () => {
-  return queryOptions({
-    queryKey: ['staff'],
-    queryFn() {
-      return window.electron.ipcRenderer.invoke('staff', {}) as unknown as {
-        total: number
-        rows: Staff[]
-      }
-    }
-  })
-}
+import { MoreVertOutlined, RefreshOutlined } from '@mui/icons-material'
+import { fetchStaff, Staff } from '@renderer/api/staff'
 
 const columnHelper = createColumnHelper<Staff>()
 
@@ -46,12 +34,32 @@ const columns = [
   }),
   columnHelper.accessor('name', {
     header: '名称'
+  }),
+  columnHelper.display({
+    id: 'actions',
+    header: '操作',
+    cell() {
+      return (
+        <IconButton>
+          <MoreVertOutlined />
+        </IconButton>
+      )
+    }
   })
 ]
 
 export const Component: React.FC = () => {
   'use no memo'
-  const query = useQuery(fetchInvoice())
+  const [pageIndex, setPageIndex] = React.useState(0)
+  const [pageSize, setPageSize] = React.useState(20)
+
+  const query = useQuery({
+    ...fetchStaff({
+      pageIndex,
+      pageSize
+    }),
+    placeholderData: keepPreviousData
+  })
 
   const data = React.useMemo(() => query.data?.rows || [], [query.data])
 
@@ -75,7 +83,13 @@ export const Component: React.FC = () => {
     }
 
     if (query.isError) {
-      return null
+      return (
+        <TableRow>
+          <TableCell colSpan={table.getAllLeafColumns().length}>
+            <Typography textAlign={'center'}>{query.error.message}</Typography>
+          </TableCell>
+        </TableRow>
+      )
     }
 
     if (!table.getRowCount()) {
@@ -104,10 +118,11 @@ export const Component: React.FC = () => {
       <Card>
         <CardHeader
           action={
-            <IconButton onClick={() => query.refetch()}>
+            <IconButton onClick={() => query.refetch()} disabled={query.isFetching}>
               <RefreshOutlined />
             </IconButton>
           }
+          title="人员管理"
         />
         <CardContent></CardContent>
         {query.isFetching && <LinearProgress />}
@@ -142,12 +157,16 @@ export const Component: React.FC = () => {
         </TableContainer>
         <TablePagination
           component={'div'}
-          rowsPerPage={20}
-          count={0}
-          page={0}
+          rowsPerPage={pageSize}
+          count={table.getRowCount()}
+          page={pageIndex}
           rowsPerPageOptions={[20, 50, 100]}
-          onPageChange={Boolean}
-          onRowsPerPageChange={Boolean}
+          onPageChange={(_, page) => {
+            setPageIndex(page)
+          }}
+          onRowsPerPageChange={(e) => {
+            setPageSize(Number.parseInt(e.target.value))
+          }}
         />
       </Card>
     </Box>

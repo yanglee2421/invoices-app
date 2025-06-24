@@ -36,7 +36,7 @@ import {
   getCoreRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { AddOutlined, EditOutlined, RefreshOutlined } from '@mui/icons-material'
+import { AddOutlined, DeleteOutlined, EditOutlined, RefreshOutlined } from '@mui/icons-material'
 import { Staff } from '@main/schema'
 import { useForm } from '@tanstack/react-form'
 import { z } from 'zod'
@@ -162,6 +162,27 @@ const StaffSelectDialog = (props: StaffSelectDialogProps) => {
   )
 }
 
+const DeleteActions = () => {
+  const dialog = useDialogs()
+  return (
+    <IconButton
+      onClick={async () => {
+        const confirmed = await dialog.confirm('确认删除吗？', {
+          title: '警告',
+          severity: 'error',
+          okText: '确认',
+          cancelText: '取消'
+        })
+        if (confirmed) {
+        }
+      }}
+      color="error"
+    >
+      <DeleteOutlined />
+    </IconButton>
+  )
+}
+
 const columnHelper = createColumnHelper<Invoice>()
 
 const columns = [
@@ -212,7 +233,12 @@ const columns = [
     id: 'actions',
     header: '操作',
     cell(props) {
-      return <StaffSelectDialog id={props.row.original.id} />
+      return (
+        <Stack direction={'row'} flexWrap={'wrap'} useFlexGap gap={0.5}>
+          <StaffSelectDialog id={props.row.original.id} />
+          <DeleteActions />
+        </Stack>
+      )
     }
   })
 ]

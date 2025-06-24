@@ -8,6 +8,7 @@ import {
   Grid,
   TextField
 } from '@mui/material'
+import { useStaffNew } from '@renderer/api/staff'
 import { useForm } from '@tanstack/react-form'
 import { useNotifications } from '@toolpad/core'
 import React from 'react'
@@ -21,18 +22,24 @@ export const Component: React.FC = () => {
   const formId = React.useId()
 
   const toast = useNotifications()
+  const create = useStaffNew()
 
   const form = useForm({
     defaultValues: {
       name: ''
     },
     async onSubmit({ value, formApi }) {
-      try {
-        await window.electron.ipcRenderer.invoke('staff:new', value)
-        formApi.reset()
-      } catch (error) {
-        toast.show(error.message, { severity: 'error' })
-      }
+      create.mutateAsync([value], {
+        onError(error) {
+          toast.show(error.message, {
+            severity: 'error'
+          })
+        },
+        onSuccess() {
+          formApi.reset()
+          toast.show('操作成功', { severity: 'success' })
+        }
+      })
     },
     validators: {
       onChange: schema
@@ -42,7 +49,7 @@ export const Component: React.FC = () => {
   return (
     <Box padding={3}>
       <Card>
-        <CardHeader />
+        <CardHeader title="添加人员" />
         <CardContent>
           <form
             id={formId}
@@ -69,6 +76,7 @@ export const Component: React.FC = () => {
                       }}
                       onBlur={nameField.handleBlur}
                       fullWidth
+                      label="名称"
                     />
                   )}
                 </form.Field>

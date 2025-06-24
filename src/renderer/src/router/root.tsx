@@ -4,13 +4,21 @@ import { MUIProvider } from '@renderer/components/mui'
 import { ReactRouterAppProvider } from '@toolpad/core/react-router'
 import { NotificationsProvider, DialogsProvider, Navigation } from '@toolpad/core'
 import { DashLayout } from '@renderer/components/layout'
+import {
+  AddOutlined,
+  DashboardOutlined,
+  GridViewOutlined,
+  PeopleAltOutlined,
+  ReceiptOutlined
+} from '@mui/icons-material'
 
-const BRANDING = { title: 'App' }
+const BRANDING = { title: '报销MS' }
 
 const NAVIGATION: Navigation = [
   {
     segment: '',
-    title: '看板'
+    title: '看板',
+    icon: <DashboardOutlined />
   },
   {
     kind: 'divider'
@@ -22,28 +30,34 @@ const NAVIGATION: Navigation = [
   {
     segment: 'staff',
     title: '员工',
+    icon: <PeopleAltOutlined />,
     children: [
       {
         segment: '',
-        title: '列表'
+        title: '列表',
+        icon: <GridViewOutlined />
       },
       {
         segment: 'new',
-        title: '新增'
+        title: '新增',
+        icon: <AddOutlined />
       }
     ]
   },
   {
     segment: 'invoice',
     title: '发票',
+    icon: <ReceiptOutlined />,
     children: [
       {
         segment: '',
-        title: '列表'
+        title: '列表',
+        icon: <GridViewOutlined />
       },
       {
         segment: 'new',
-        title: '新增'
+        title: '新增',
+        icon: <AddOutlined />
       }
     ]
   }

@@ -43,6 +43,7 @@ import { z } from 'zod'
 import { useDialogs, useNotifications, DialogProps } from '@toolpad/core'
 import * as mathjs from 'mathjs'
 import { fetchInvoice, Invoice } from '@renderer/api/invoice'
+import { useStaffToInvoiceNew } from '@renderer/api/staffToInvoice'
 
 const formSchema = z.object({
   staff: z.number().array()
@@ -64,21 +65,22 @@ const StaffSelectDialog = (props: StaffSelectDialogProps) => {
   const formId = React.useId()
 
   const toast = useNotifications()
+  const create = useStaffToInvoiceNew()
 
   const form = useForm({
     defaultValues,
     async onSubmit({ value }) {
-      try {
-        for (const staffId of value.staff) {
-          await window.electron.ipcRenderer.invoke('staffToInvoice:new', {
-            staffId,
-            invoiceId: props.id
-          })
+      await create.mutateAsync(
+        value.staff.map((staffId) => ({ staffId: +staffId, invoiceId: props.id })),
+        {
+          onError(error) {
+            toast.show(error.message, { severity: 'error' })
+          },
+          onSuccess() {
+            handleClose()
+          }
         }
-        handleClose()
-      } catch (error) {
-        toast.show(error.message, { severity: 'error' })
-      }
+      )
     },
     validators: {
       onChange: formSchema
@@ -357,12 +359,18 @@ export const Component: React.FC = () => {
                   )
                 })
 
+                const count = rows.reduce((result, row) => {
+                  return mathjs
+                    .add(mathjs.bignumber(row.original.amount), mathjs.bignumber(result))
+                    .toString()
+                }, '0')
+
                 dialog.open(ResultDialog, {
                   children: (
                     <Table>
                       <TableHead>
-                        <TableCell>STAFF</TableCell>
-                        <TableCell>AMOUNT</TableCell>
+                        <TableCell>人员</TableCell>
+                        <TableCell>价税合计</TableCell>
                       </TableHead>
                       <TableBody>
                         {[...map.entries()].map((i) => (
@@ -371,6 +379,10 @@ export const Component: React.FC = () => {
                             <TableCell>{i[1]}</TableCell>
                           </TableRow>
                         ))}
+                        <TableRow>
+                          <TableCell>总计</TableCell>
+                          <TableCell>{count}</TableCell>
+                        </TableRow>
                       </TableBody>
                     </Table>
                   )

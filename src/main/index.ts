@@ -180,11 +180,15 @@ ipcMain.handle('staff:new', async (_, payload: StaffInsertParams) => {
 type StaffToInvoiceInsertParams = {
   staffId: number
   invoiceId: number
-}
+}[]
 
 ipcMain.handle('staffToInvoice:new', async (_, payload: StaffToInvoiceInsertParams) => {
   try {
-    const data = await db.insert(schema.staffToInvoice).values(payload).returning()
+    const data = await db
+      .insert(schema.staffToInvoice)
+      .values(payload)
+      .onConflictDoNothing()
+      .returning()
 
     return data
   } catch (error) {

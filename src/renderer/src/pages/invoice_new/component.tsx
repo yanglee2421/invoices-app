@@ -119,6 +119,12 @@ export const Component: React.FC = () => {
   const create = useInvoiceNew()
   const toast = useNotifications()
 
+  const renderDisableCommit = () => {
+    if (create.isPending) return true
+    if (!files.length) return true
+    return !queries.every((query) => query.isSuccess)
+  }
+
   return (
     <Box padding={3}>
       <Card>
@@ -144,7 +150,7 @@ export const Component: React.FC = () => {
                   }
                 })
               }}
-              disabled={create.isPending}
+              disabled={renderDisableCommit()}
             >
               <ArrowUpwardOutlined />
             </IconButton>
